@@ -251,7 +251,7 @@ def send_invite(conn,accounts,num_accounts,first_name,last_name,cur_person_index
 def confirm_invite(conn, accounts, sender, receiver):
   cursor = conn.cursor()
   #confirm invite
-    #send invite to friend
+  #send invite to friend
   receiver_friends = accounts[receiver][9]
   sender_friends = accounts[sender][9]
 
@@ -303,25 +303,29 @@ def disconnect(conn, accounts, sender, receiver):
 def check_invites(conn,accounts,account_num):
   invites = accounts[account_num][11]
   if len(invites) == 0:
-    return
+    return []
   else:
     print("Please confirm the following pending friend requests: ")
+    confirmed = []
     invites = invites.split(',')
     invites = [int(i) for i in invites]
     for i in invites:
+      #accounts = all_accounts(conn)
       sender_first_name = accounts[i-1][3]
       sender_last_name = accounts[i-1][4]
-      print("You have recieved a friend invite from {} {}. Do you wish to confirm.".format(sender_first_name,sender_last_name))
+      print("You have recieved a friend invite from {} {}. Do you wish to confirm?".format(sender_first_name,sender_last_name))
       confirm = input("Type 'y' or 'n': ").lower()
       while confirm != 'y' and confirm != 'n':
         confirm = input("Type 'y' or 'n': ").lower()
       if confirm == 'y':
-        confirm_invite(conn, accounts, i-1, account_num)
-        print("\nYou are now friends with {} {}.".format(sender_first_name,sender_last_name))
+        #add friend to confirmed list
+        confirmed.append(i)
+        print("\nYou are now friends with {} {}.\n".format(sender_first_name,sender_last_name))
       else:
-        print("You have rejected {} {}.".format(sender_first_name,sender_last_name))
+        print("You have rejected {} {}.\n".format(sender_first_name,sender_last_name))
+        
       #delete from sender's invites sent outbox regardless
-      invites_outbox = accounts[i-1][10].split()
+      invites_outbox = accounts[i-1][10].split(',')
       #index is necessarily in the invites sent list
       index = invites_outbox.index(str(account_num+1))
       invites_outbox.pop(index)
@@ -329,7 +333,8 @@ def check_invites(conn,accounts,account_num):
       #update database
       cursor = conn.cursor()
       cursor.execute("UPDATE accounts SET invites_sent = ? WHERE user_num = ?",(invites_outbox,i))
-
+    return confirmed
+    
 # Function to search by last name, university, or major
 def find_someone(conn, accounts, logged_in_user):
   cursor = conn.cursor()
@@ -545,7 +550,12 @@ def log_in(conn,accounts,num_accounts,jobs):
     last_name = accounts[account_num][4]
 
     #check for any friend requests, confirm accordingly then reset invites inbox  
-    check_invites(conn,accounts,account_num)
+    confirmed = check_invites(conn,accounts,account_num)
+    for i in confirmed:
+      confirm_invite(conn, accounts, i-1, account_num)
+      conn.commit()
+      accounts = all_accounts(conn)
+      
     cursor.execute("UPDATE accounts SET invites_received = ? WHERE user_num = ?;",("",account_num+1))
     conn.commit()
     accounts = all_accounts(conn)
@@ -783,7 +793,7 @@ def main():
   num_accounts = len(accounts)
   jobs = all_jobs(conn)
   #uncomment following line to see current contents of database
-  print(accounts)
+  #print(accounts)
   
 
   #opening page of application
