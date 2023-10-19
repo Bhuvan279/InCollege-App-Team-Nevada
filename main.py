@@ -246,6 +246,12 @@ def send_invite(conn,accounts,num_accounts,first_name,last_name,cur_person_index
     print("\nUser not in InCollege System!",end='')
     return False
 
+#utility function to delete last user from database
+def delete_last(conn):
+  cursor = conn.cursor()
+  cursor.execute("DELETE FROM accounts WHERE user_num = (SELECT MAX(user_num) FROM accounts)")
+  conn.commit()
+
 #function to confirm invites and establish friendship
 # 'sender' and 'receiver' are indices to accounts
 def confirm_invite(conn, accounts, sender, receiver):

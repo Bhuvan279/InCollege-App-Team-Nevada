@@ -8,6 +8,8 @@ from _pytest.capture import capfd
 from main import (
   add_account,
   all_accounts,
+  all_friends,
+  all_pending,
   check_password,
   check_user,
   navigate_inCollege_links,
@@ -19,7 +21,12 @@ from main import (
   change_langauge,
   change_controls,
   print_useful_links,
-  print_inCollege_links
+  print_inCollege_links,
+  find_someone,
+  send_invite,
+  check_invites,
+  confirm_invite,
+  delete_last
 )
 
 
@@ -66,10 +73,12 @@ def test_add_account():
   password = "Test123!"
   first_name = "Spongebob"
   last_name = "Squarepants"
+  uni = "FakeUni"
+  major = "MockMajor"
   
   accounts = all_accounts(conn)
   prev_num_accounts = len(accounts)
-  add_account(conn, username, password, first_name, last_name)
+  add_account(conn, username, password, first_name, last_name, uni, major)
   accounts = all_accounts(conn)
   new_num_accounts = len(accounts)
   
@@ -94,7 +103,7 @@ def test_check_user_existing_user(monkeypatch):
     # add_account(in_memory_db, 'test_user', 'Test123!', 'John', 'Doe')
     conn = sqlite3.connect('accounts.db')
     
-    add_account(conn, 'test_user', 'Test123!', 'Spongebob', 'Squarepants')
+    add_account(conn, 'test_user', 'Test123!', 'Spongebob', 'Squarepants', 'FakeUni', 'MockMajor')
     accounts = all_accounts(conn)
     input_values = ["Spongebob", "Squarepants"]
     
@@ -111,7 +120,7 @@ def test_check_user_existing_user(monkeypatch):
 # Test the check_user function with a nonexisting user
 def test_check_user_non_existing_user(monkeypatch):
     conn = sqlite3.connect('accounts.db')
-    add_account(conn, 'test_user', 'Test123!', 'TestPerson', 'TestPerson')
+    add_account(conn, 'test_user', 'Test123!', 'TestPerson', 'TestPerson', 'FakeUni', 'MockMajor')
     accounts = all_accounts(conn)
     input_values = ["IDont", "Exist"]
     
@@ -189,7 +198,7 @@ def test_post_job():
 def test_change_language(monkeypatch):
     # Insert a mock user into the database
     conn = sqlite3.connect('accounts.db')
-    add_account(conn, 'mock_user', 'Test123!', 'Patrick', 'Star')
+    add_account(conn, 'mock_user', 'Test123!', 'Patrick', 'Star', 'FakeUni', 'MockMajor')
     cursor = conn.cursor()
     # mock_db_connection.commit()
     accounts = all_accounts(conn)
@@ -217,7 +226,7 @@ def test_change_language(monkeypatch):
 #testing the change_controls() story
 def test_change_controls(monkeypatch):
     conn = sqlite3.connect('accounts.db')
-    add_account(conn, 'mock_user', 'Test123!', 'Patrick', 'Star')
+    add_account(conn, 'mock_user', 'Test123!', 'Patrick', 'Star', 'FakeUni', 'MockMajor')
     cursor = conn.cursor()
     # mock_db_connection.commit()
     accounts = all_accounts(conn)
@@ -257,7 +266,7 @@ def test_navigate_inCollege_links(capfd,monkeypatch):
 
   #Insert a mock user into the database
   conn = sqlite3.connect('accounts.db')
-  add_account(conn, 'mock_user', 'Test123!', 'Patrick', 'Star')
+  add_account(conn, 'mock_user', 'Test123!', 'Patrick', 'Star', 'FakeUni', 'MockMajor')
   cursor = conn.cursor()
   account_num = cursor.execute("SELECT user_num FROM accounts WHERE user_name = 'mock_user'").fetchone()[0]
   language = cursor.execute("SELECT language FROM accounts WHERE user_name = 'mock_user'").fetchone()[0]
@@ -304,3 +313,223 @@ def test_navigate_inCollege_links(capfd,monkeypatch):
   #check change controls and language options outputted correctly
   assert "Here are your guest controls:" in out
   assert "Your current language is {}".format(language) in out 
+
+
+# ========================================================#
+# ==========Epic 4 test cases as of 10/12/2023============#
+# ========================================================#
+
+
+#Once a student has logged into the InCollege system,test the "Find someone you know" feature to search for students in the system by last name
+
+def test_find_someone_you_know_by_lastname(capfd, monkeypatch):
+  conn = sqlite3.connect('accounts.db')
+  add_account(conn, 'mock_user', 'Test123!', 'Patrick', 'Star', 'FakeUni', 'MockMajor')
+  accounts = all_accounts(conn)
+  account_num = accounts[-1][0]
+  # Setup user inputs for `find_someone` function
+  user_input = ['1','Star','0']  
+    
+  def mock_input(prompt):
+    return user_input.pop(0)
+  monkeypatch.setattr('builtins.input', mock_input)  # simulate user selecting '1' and then inputting 'Star' for the lastname
+  
+  find_someone(conn, accounts, account_num)
+  # Capture what's printed to stdout
+  out, err = capfd.readouterr()
+  # assert that the output includes 'Patrick Star'
+  assert 'Patrick Star' in out
+
+  conn.close()
+  
+#Once a student has logged into the InCollege system,test the "Find someone you know" feature to search for students in the system by university
+
+def test_find_someone_you_know_by_university(capfd, monkeypatch):
+  conn = sqlite3.connect('accounts.db')
+  add_account(conn, 'mock_user', 'Test123!', 'Patrick', 'Star', 'FakeUni', 'MockMajor')
+  accounts = all_accounts(conn)
+  account_num = accounts[-1][0]
+  # Setup user inputs for `find_someone` function
+  user_input = ['2','FakeUni','0']  
+    
+  def mock_input(prompt):
+    return user_input.pop(0)
+  monkeypatch.setattr('builtins.input', mock_input)  # simulate user selecting '2' and then inputting 'FakeUni' to search by university name
+  
+  find_someone(conn, accounts, account_num)
+  # Capture what's printed to stdout
+  out, err = capfd.readouterr()
+  # assert that the output includes 'Patrick Star'
+  assert 'Patrick Star' in out
+
+  conn.close()
+
+#Once a student has logged into the InCollege system,test the "Find someone you know" feature to search for students in the system by major.
+
+def test_find_someone_you_know_by_major(capfd, monkeypatch):
+  conn = sqlite3.connect('accounts.db')
+  add_account(conn, 'mock_user', 'Test123!', 'Patrick', 'Star', 'FakeUni', 'MockMajor')
+  accounts = all_accounts(conn)
+  account_num = accounts[-1][0]
+  # Setup user inputs for `find_someone` function
+  user_input = ['3','MockMajor','0']  
+    
+  def mock_input(prompt):
+    return user_input.pop(0)
+  monkeypatch.setattr('builtins.input', mock_input)  # simulate user selecting '3' and then inputting 'MockMajor' to search by major
+  
+  find_someone(conn, accounts, account_num)
+  # Capture what's printed to stdout
+  out, err = capfd.readouterr()
+  # assert that the output includes 'Patrick Star'
+  assert 'Patrick Star' in out
+
+  conn.close()
+
+#Perform test with user who exists in the system and a student who doesnt exist in the system for the cases above
+
+def test_find_nonexistent_user(capfd, monkeypatch):
+  conn = sqlite3.connect('accounts.db')
+  add_account(conn, 'mock_user', 'Test123!', 'Patrick', 'Star', 'FakeUni', 'MockMajor')
+  accounts = all_accounts(conn)
+  account_num = accounts[-1][0]
+  # Setup user inputs for `find_someone` function
+  user_input = ['1','Starry','0']  
+    
+  def mock_input(prompt):
+    return user_input.pop(0)
+  monkeypatch.setattr('builtins.input', mock_input)  # simulate user selecting '1' and then inputting 'Star' for the lastname
+  
+  find_someone(conn, accounts, account_num)
+  # Capture what's printed to stdout
+  out, err = capfd.readouterr()
+  # assert that the output includes 'Patrick Star'
+  assert 'No results found' in out
+
+  conn.close()
+
+#Test output if no such user is found
+#conn,accounts,account_num
+def test_request_with_nonexistent_user(capfd, monkeypatch):
+  conn = sqlite3.connect('accounts.db')
+  add_account(conn, 'mock_user', 'Test123!', 'Patrick', 'Star', 'FakeUni', 'MockMajor')
+  accounts = all_accounts(conn)
+  account_num = accounts[-1][0]
+  
+  send_invite(conn,accounts,len(accounts),\
+                      'mock_first','mock_last',account_num)
+  # Capture what's printed to stdout
+  out, err = capfd.readouterr()
+  # assert that the system informs that no such user exists
+  assert 'User not in InCollege System!' in out
+
+  conn.close()
+
+
+
+#Create 2 mock users, 1 is the user who logs in and 2 is the pending friend request. 
+
+#CASE 1: The user rejects the friend request from mock user 2 and displays an empty friend list.
+def test_list_of_friends_reject(capfd, monkeypatch):
+   # Insert 2 mock users into the database
+    conn = sqlite3.connect('accounts.db')
+    delete_last(conn)
+    add_account(conn,'mock_user1', 'Test123!', 'Patrick1', 'Star1', 'FakeUni1', 'MockMajor1')
+    add_account(conn,'mock_user2', 'Test123!', 'Patrick2', 'Star2', 'FakeUni2', 'MockMajor2')
+    accounts = all_accounts(conn)
+    mock_user1_num = accounts[-2][0]-1
+    mock_user2_num = accounts[-1][0]-1
+  
+    mock_user1 = accounts[mock_user1_num]
+
+    # Simulate a friend request from mock_user2
+    mock_user2_fn = accounts[mock_user2_num][3]
+    mock_user2_ln = accounts[mock_user2_num][4]
+    send_invite(conn,accounts,len(accounts),mock_user2_fn,mock_user2_ln,mock_user1_num)
+    conn.commit()
+    accounts = all_accounts(conn)
+
+    # Simulate rejecting the friend request by entering 'n'
+    user_input = ['n']  
+
+    def mock_input(prompt):
+        return user_input.pop(0)
+    monkeypatch.setattr('builtins.input', mock_input)
+  
+     # Simulate rejecting the friend request by removing the friend request from the invites received list
+    confirmed = check_invites(conn,accounts,mock_user2_num)
+
+    #assert confirmed list is empty since user was rejected
+    assert len(confirmed) == 0
+
+    delete_last(conn)
+    delete_last(conn)
+
+  
+#CASE 2: The user accepts the friend request from mock user 2 
+def test_list_of_friends_accept(capfd, monkeypatch):
+   # Insert 2 mock users into the database
+    conn = sqlite3.connect('accounts.db')
+    add_account(conn,'mock_user1', 'Test123!', 'Patrick1', 'Star1', 'FakeUni1', 'MockMajor1')
+    add_account(conn,'mock_user2', 'Test123!', 'Patrick2', 'Star2', 'FakeUni2', 'MockMajor2')
+    accounts = all_accounts(conn)
+    mock_user1_num = accounts[-2][0]-1
+    mock_user2_num = accounts[-1][0]-1
+
+    # Simulate a friend request from mock_user2
+    mock_user2_fn = accounts[mock_user2_num][3]
+    mock_user2_ln = accounts[mock_user2_num][4]
+    send_invite(conn,accounts,len(accounts),mock_user2_fn,mock_user2_ln,mock_user1_num)
+    conn.commit()
+    accounts = all_accounts(conn)
+
+    # Simulate rejecting the friend request by entering 'n'
+    user_input = ['y']  
+
+    def mock_input(prompt):
+        return user_input.pop(0)
+    monkeypatch.setattr('builtins.input', mock_input)
+  
+     # Simulate rejecting the friend request by removing the friend request from the invites received list
+    confirmed = check_invites(conn,accounts,mock_user2_num)
+
+    #assert confirmed list is empty since user was rejected
+    assert mock_user2_num in confirmed
+
+    delete_last(conn)
+    delete_last(conn)
+
+#mock user 1 disconnects with mock user 2. mock user 1 disconnect with nonexistent user.
+
+def test_disconnect_with_valid_friend(capfd, monkeypatch):
+  # Insert 2 mock users into the database
+  conn = sqlite3.connect('accounts.db')
+  accounts = all_accounts(conn)
+  add_account(conn, 'mock_user1', 'Test123!', 'Patrick1', 'Star1', 'FakeUni1', 'MockMajor1')
+  add_account(conn, 'mock_user2', 'Test123!', 'Patrick2', 'Star2', 'FakeUni2', 'MockMajor2')
+  
+  conn.commit()
+  
+  accounts = all_accounts(conn)
+  mock_user1_num = accounts[-1][0]-1
+  mock_user2_num = accounts[-2][0]-1
+
+  # simulate the login of mock user 1
+  account_num = accounts[-2][0]-1
+  mock_user1 = accounts[account_num]
+  friends_list = accounts[mock_user1_num][9]
+    
+  # Simulate disconnecting with mock_user2
+  user_input = ['y']
+  
+  def mock_input(prompt):
+      return user_input.pop(0)
+  monkeypatch.setattr('builtins.input', mock_input)
+  
+  # confirm mock_user2's user_num is not in the friends list
+  assert str(mock_user2_num) not in friends_list
+
+  delete_last(conn)
+  delete_last(conn)
+  
+  
