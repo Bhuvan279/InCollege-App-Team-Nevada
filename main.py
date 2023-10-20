@@ -76,7 +76,7 @@ def post_job(conn,first_name,last_name,title,descr,employer,location, salary):
 ''', (first_name,last_name,title,descr,employer,location, salary))
   return True
   
-#given first and last name, check if user is in the system
+#given first and last name, check if user is in the system.
 def check_user(accounts,num_accounts):
   print()
   in_system = input("Enter first name: ")
