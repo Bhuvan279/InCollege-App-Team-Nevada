@@ -62,6 +62,20 @@ def add_account(conn,username,password,first_name,last_name,uni,major):
     INSERT INTO accounts (user_name, password, first_name, last_name, controls, language, university, major, friends, invites_sent, invites_received) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ''', (username, password, first_name, last_name, 'y,y,y', 'e',uni,major,'','',''))
 
+
+def profiles():
+  conn = sqlite3.connect('accounts.db')
+  
+
+
+
+
+
+
+
+
+
+
 #post a job to the jobs table in accounts database
 def post_job(conn,first_name,last_name,title,descr,employer,location, salary):
   cursor = conn.cursor()
