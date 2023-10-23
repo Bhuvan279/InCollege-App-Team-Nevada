@@ -5,6 +5,9 @@ import sqlite3
 import pytest
 from _pytest.capture import capfd
 
+import os
+import json
+
 from main import (
   add_account,
   all_accounts,
@@ -26,7 +29,12 @@ from main import (
   send_invite,
   check_invites,
   confirm_invite,
-  delete_last
+  delete_last,
+  load_profiles,
+  update_db_uni_major,
+  build_profile,
+  update_work_experience,
+  view_profile
 )
 
 
@@ -532,4 +540,53 @@ def test_disconnect_with_valid_friend(capfd, monkeypatch):
   delete_last(conn)
   delete_last(conn)
   
-  
+
+
+# ========================================================#
+# ==========Epic 5 test cases as of 10/12/2023============#
+# ========================================================#
+
+
+# test case for loading the profiles
+def test_load_profiles(tmpdir):
+    # creating a temporary directory and set the working directory to it
+    tmp_dir = tmpdir.mkdir("temp_data")
+    os.chdir(tmp_dir)
+
+    # creating a sample profiles.json file with data
+    sample_data = {"user1": {"title": "Student", "major": "Computer Science"}}
+    with open("profiles.json", "w") as file:
+        json.dump(sample_data, file)
+
+    # Calling the load_profiles function and checking the result
+    profiles = load_profiles()
+
+    # Checking if the loaded profiles match the sample data
+    assert profiles == sample_data
+
+# Defining a test for update_db_uni_major
+def test_update_db_uni_major():
+    conn = sqlite3.connect("accounts.db")
+
+    # Create a table for testing
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE accounts (user_name TEXT, university TEXT, major TEXT)''')
+
+    # Insert a sample user into the database
+    cursor.execute("INSERT INTO accounts (user_name, university, major) VALUES (?, ?, ?)",
+                   ("test_user", "Test University", "Test Major"))
+    conn.commit()
+
+    # Call the update_db_uni_major function to update the user's university and major
+    update_db_uni_major(conn, "test_user", "Updated University", "Updated Major")
+
+    # Retrieve the updated user data from the database
+    cursor.execute("SELECT university, major FROM accounts WHERE user_name = ?", ("test_user",))
+    result = cursor.fetchone()
+
+    # Check if the university and major were updated correctly
+    assert result == ("Updated University", "Updated Major")
+
+    # Close the database connection
+    conn.close()
+

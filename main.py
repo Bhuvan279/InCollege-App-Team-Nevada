@@ -1,11 +1,11 @@
 #InCollege Solution Team Nevada
 
 #Connect to SQLite database
-import sqlite3
 import json
 import os
-# Connect to the SQLite database (or create it if it doesn't exist)
+import sqlite3
 
+# Connect to the SQLite database (or create it if it doesn't exist)
 
 def create_db():
   conn = sqlite3.connect('accounts.db')
@@ -41,19 +41,6 @@ def create_db():
           location TEXT,
           salary FLOAT)
   ''')
-
-  # Execute SQL command to create a table storing profiles
-  
-  cursor.execute('''
-      CREATE TABLE IF NOT EXISTS profiles (
-          profile_id INTEGER PRIMARY KEY,
-          user_name TEXT, 
-          title TEXT,
-          major TEXT,
-          university TEXT,
-          about TEXT
-      )
-  ''')
   
   return conn
 
@@ -84,109 +71,22 @@ def add_account(conn, username, password, first_name, last_name, uni, major):
 
 
 # ================== EPIC 5 - Profiles ==================#
-#loads profiles info and returns a python dictionary
+# loads profiles info and returns a python dictionary
 def load_profiles():
   if not os.path.exists('profiles.json'):
     file = open('profiles.json','w')
+    file.write('{}')
     file.close()
   file = open('profiles.json')
   profiles = json.load(file)
   file.close()
-  return profiles()
-    
-"""
-# EPIC_5 Function to create or update the user's profile
-def create_or_update_profile(conn, account):
-  account.title = input("Enter your title: ")
-  account.major = input("Enter your major: ").title()
-  account.university = input("Enter your university: ").title()
-  account.about = input("Enter your about information: ")
+  return profiles
 
-  #Initializing experience and education lists
-  account.experience = []
-  account.education = []
-
-  # Enter experience information
-  for i in range(3):
-    experience = {}
-    # Collect experience information
-    experience['title'] = input(f"Enter your job title for experience {i + 1} (or press Enter to skip): ")
-    if not experience['title']:
-        break  # No more experiences to add
-    experience['employer'] = input("Enter the employer: ")
-    experience['start_date'] = input("Enter the start date: ")
-    experience['end_date'] = input("Enter the end date: ")
-    experience['location'] = input("Enter the location: ")
-    experience['description'] = input("Enter a description: ")
-    account.experiences.append(experience)
-
-  # Enter education information
-  while True:
-      edu = {}
-      # Collect education information
-      edu['school_name'] = input("Enter the school name (or press Enter to skip): ")
-      if not edu['school_name']:
-          break  # No more education to add
-      edu['degree'] = input("Enter your degree: ")
-      edu['years_attended'] = input("Enter years attended: ")
-      account.education.append(edu)
-
+# updates database with uni, major info when user updates profile
+def update_db_uni_major(conn,user_name,uni,major):
+  cursor = conn.cursor()
+  cursor.execute("UPDATE accounts SET university = ?, major = ? WHERE user_name = ?", (uni,major,user_name))
   conn.commit()
-  print("\nProfile successfully created/updated.\n")
-
-# Function displaying user's own profile
-def view_own_profile(account):
-  # Display profile information
-  print("Name: ", account.first_name, account.last_name)
-  print("Title: ", account.title)
-  print("Major: ", account.major)
-  print("University: ", account.university)
-  print("About: ", account.about)
-
-  # Displaying experience
-  print("\nExperience:")
-  for experience in account.experience:
-    print("Title: ", experience['title'])
-    print("Employer: ", experience['employer'])
-    print("Start Date: ", experience['start_date'])
-    print("End Date: ", experience['end_date'])
-    print("Location: ", experience['location'])
-    print("Description: ", experience['description'])
-
-  #Displaying education
-  print("\nEducation:")
-  for edu in account.education:
-    print("School Name: ", edu['school_name'])
-    print("Degree: ", edu['degree'])
-    print("Years Attended:", edu['years_attended'])
-
-# Function to view a friend's profile
-def view_friend_profile(account, friend_account):
-  # Displaying the friend's profile information
-  print("Name: ", friend_account.first_name, friend_account.last_name)
-  print("Title: ", friend_account.title)
-  print("Major: ", friend_account.major)
-  print("University: ", friend_account.university)
-  print("About: ", friend_account.about)
-
-  # Displaying experience
-  print("\nExperience:")
-  for experience in friend_account.experience:
-    print("Title: ", experience['title'])
-    print("Employer: ", experience['employer'])
-    print("Start Date: ", experience['start_date'])
-    print("End Date: ", experience['end_date'])
-    print("Location: ", experience['location'])
-    print("Description: ", experience['description'])
-
-  #Displaying education
-  print("\nEducation:")
-  for edu in friend_account.education:
-    print("School Name: ", edu['school_name'])
-    print("Degree: ", edu['degree'])
-    print("Years Attended:", edu['years_attended'])
-"""
-
 
 def create_profile(account, conn):
   cursor = conn.cursor()
@@ -205,83 +105,311 @@ def create_profile(account, conn):
   conn.commit()
   print("Profile created successfully!")
 
-def update_profile(account, profile, conn):
-  cursor = conn.cursor()
-  print(profile)
-  new_title = profile[2]
-  new_major = profile[3]
-  new_university = profile[4]
-  new_about = profile[5]
-
-  print("Enter '1' to change title")
-  print("Enter '2' to change major")
-  print("Enter '3' to change university")
-  print("Enter '4' to change about")
-  print("Enter '5' to change all")
-
-  choice = int(input("Enter your choice"))
-  while (choice == 1 or choice == 2 or choice == 3 or choice == 4 or choice == 5): 
-    break
-    print("Invalid choice. Please enter a valid choice.")
-    choice = int(input("Enter your choice"))
+# Function to build a profile
+def build_profile(profiles, user_name, first_name, last_name):
+  print("\nBuild your profile here. 'q' at any stage to quit")
+  #create dictionary entry if it does not exist
+  if user_name not in profiles.keys():
+    profiles[user_name] = {}
     
-  if choice == 1:
-    print("Enter your new title: ")
-    new_title = input()
-  elif choice == 2: 
-    print("Enter your new major: ")
-    new_major = input()
-  elif choice == 3:
-    print("Enter your new university: ")
-    new_university = input()
-  elif choice == 4:
-    print("Enter your new about: ")
-    new_about = input()
-  elif choice == 5:
-    print("Enter your new title: ")
-    new_title = input()
-    print("Enter your new major: ")
-    new_major = input()
-    print("Enter your new university: ")
-    new_university = input()
-    print("Enter your new about: ")
-    new_about = input()
+    #initialize profile fields to empty fields
+    profiles[user_name]['title'] = ''
+    profiles[user_name]['major'] = ''
+    profiles[user_name]['uni'] = ''
+    profiles[user_name]['uni_abbr'] = ''
+    profiles[user_name]['about'] = ''
+    profiles[user_name]['school'] = ''
+    profiles[user_name]['degree'] = ''
+    profiles[user_name]['yrs'] = ''
+    profiles[user_name]['num_jobs'] = 0
+    profiles[user_name]['exp'] = {}
 
-  cursor.execute("UPDATE profiles SET major = ?, title = ?, university = ? , about = ? WHERE user_name = ?;", (new_major, new_title, new_university, new_about, account[0][1]))
-    
-  conn.commit()
-  print("Profile successfully updated")
+  #track num of changes made
+  num_changes = 0
+  #ask for user input to fill in fields
+  if len(profiles[user_name]['title']) == 0:
+    title = input("Enter your title: ")
+    if title == 'q':
+      return
+    profiles[user_name]['title'] = title
+    num_changes += 1
+  else:
+    print('Title:',profiles[user_name]['title'])
+
+  if len(profiles[user_name]['major']) == 0:
+    major = input("Enter your major: ").title()
+    if major == 'q':
+      return
+    profiles[user_name]['major'] = major
+    num_changes += 1
+  else:
+    print('Major:',profiles[user_name]['major'])
+
+  if len(profiles[user_name]['uni']) == 0:
+    uni = input("Enter your university's name: ").title()
+    if uni == 'q':
+      return
+    profiles[user_name]['uni'] = uni
+    num_changes += 1
+  else:
+    print('University:',profiles[user_name]['uni'])
+
+  if len(profiles[user_name]['uni_abbr']) == 0:
+    uni_abbr = input("Enter your university's abbreviation: ").upper()
+    if uni_abbr == 'q':
+      return
+    profiles[user_name]['uni_abbr'] = uni_abbr
+    num_changes += 1
+  else:
+    print('University:',profiles[user_name]['uni'])
+
+  if len(profiles[user_name]['about']) == 0:
+    about = input("Enter your about section: ")
+    if about == 'q':
+      return
+    profiles[user_name]['about'] = about
+    num_changes += 1
+  else:
+    print('About:',profiles[user_name]['about'])
   
-# Function to display the user's own profile
-def view_profile(profiles, user_name):
-  if len(profiles[user_name]) == 0:
-    print("You have not created a profile yet. Please create one first.")
+  #enter a job, for up to three jobs
+  num_jobs = profiles[user_name]['num_jobs']
+  if num_jobs == 0:
+    num_changes += 1
+    job_choice = input("Would you like to enter work experience? ('y' or 'n') ")
+    while job_choice not in ['y','n','q']:
+      job_choice = input("Enter ('y' or 'n' or 'q') ")
+    if job_choice == 'q':
+      return
+    elif job_choice == 'y':   
+      while num_jobs < 3:
+        num_jobs += 1
+        #initialize job fields to empty
+        profiles[user_name]['exp'][f'job{num_jobs}'] = {}
+        profiles[user_name]['exp'][f'job{num_jobs}']['title'] = ''
+        profiles[user_name]['exp'][f'job{num_jobs}']['employer'] = ''
+        profiles[user_name]['exp'][f'job{num_jobs}']['start'] = ''
+        profiles[user_name]['exp'][f'job{num_jobs}']['end'] = ''
+        profiles[user_name]['exp'][f'job{num_jobs}']['location'] = ''
+        profiles[user_name]['exp'][f'job{num_jobs}']['descr'] = ''
+        job_title = input("Enter your job title: ")
+        if job_title == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['title'] = job_title
+        job_company = input("Enter your employer's name: ").title()
+        if job_title == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['employer'] = job_company
+        start = input('Enter date started: ')
+        if start == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['start'] = start
+        end = input('Enter date ended: ')
+        if end == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['end'] = end
+        location = input("Enter your location: ")
+        if location == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['location'] = location
+        descr = input("Enter your job description: ")
+        if descr == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['descr'] = descr
+        if num_jobs == 3:
+          break
+          # ask if user wishes to enter another job
+        job_choice = input("Would you like to enter another work experience? ('y' or 'n') ")
+        while job_choice not in ['y','n','q']:
+          job_choice = input("Enter ('y' or 'n' or 'q') ")
+        if job_choice == 'q':
+          return
+        elif job_choice == 'y':
+          if num_jobs == 3:
+            break
+          continue
+        else:
+          break
+    profiles[user_name]['num_jobs'] = num_jobs
+  else:
+    print("Work experience already entered. Please use update feature to add/update.")
+  
+  # prompt user for education section of profile
+  if len(profiles[user_name]['school']) == 0:
+    school = input("Enter your school name (for previous education): ")
+    if school == 'q':
+      return
+    profiles[user_name]['school'] = school
+    num_changes += 1
+  else:
+    print("Previous Education:")
+    print("    School:",profiles[user_name]['school'])
+  if len(profiles[user_name]['degree']) == 0:
+    degree = input("Enter degree earned from this school: ")
+    if degree == 'q':
+      return
+    profiles[user_name]['degree'] = degree
+    num_changes += 1
+  else:
+    print("    Degree:",profiles[user_name]['degree'])
+
+  if len(profiles[user_name]['yrs']) == 0:
+    yrs = input("Enter number of years attended at this school: ")
+    if yrs == 'q':
+      return
+    profiles[user_name]['yrs'] = yrs
+    num_changes += 1
+  else:
+    print("    Years:",profiles[user_name]['yrs'])
+
+  if num_changes == 0:
+    print("\nYou have finished building your profile. \nUse the 'update profile' feature to edit your existing profile.")
+  else:
+    print("\nProfile saved! ")
+
+# Function to allow user to add a work experience (up to max of 3)
+def update_work_experience(profiles, user_name):
+  num_jobs = profiles[user_name]['num_jobs']
+  while True:
+    add_or_edit = input("\nDo you wish to add a work experience or edit one? ('a' or 'e') ")
+    #input validation
+    while add_or_edit not in ['a','e','q']:
+      add_or_edit = input("Enter ('a' or 'e') or 'q' to quit: ")
+    if add_or_edit == 'q':
+      return
+    elif add_or_edit == 'e':
+      job_num = 0
+      try:
+        job_num = int(input("Enter job number you wish to modify: "))
+        if job_num < 1 or job_num > num_jobs:
+          raise ValueError
+      except ValueError:
+        print(f"Please enter a valid number between 1 and {num_jobs}")
+        continue
+
+      if job_num == 0:
+        continue
+      options = list(profiles[user_name]['exp'][f"job{job_num}"].keys())     
+     
+      print(f"Your options to edit job fields are : {options}")
+      while True:
+        field = input("Enter the field you wish to edit: ").lower()
+        if field == 'q':
+          return
+        elif field not in options:
+          print("Invalid field. Try again. Enter 'q' to quit.")
+          continue
+        else:
+          new_field = input(f'Enter new {field}: ')
+          profiles[user_name]['exp'][f"job{job_num}"][field] = new_field
+          print("Change successfully saved. Enter 'q' to exit.")
+    elif add_or_edit == 'a' and num_jobs >= 3:
+      print("Maximum jobs allowed is 3. Please edit existing job.")
+      break  
+    else:
+        num_jobs += 1
+        #initialize job fields to empty
+        profiles[user_name]['exp'][f'job{num_jobs}'] = {}
+        profiles[user_name]['exp'][f'job{num_jobs}']['title'] = ''
+        profiles[user_name]['exp'][f'job{num_jobs}']['employer'] = ''
+        profiles[user_name]['exp'][f'job{num_jobs}']['start'] = ''
+        profiles[user_name]['exp'][f'job{num_jobs}']['end'] = ''
+        profiles[user_name]['exp'][f'job{num_jobs}']['location'] = ''
+        profiles[user_name]['exp'][f'job{num_jobs}']['descr'] = ''
+        job_title = input("Enter your job title: ")
+        if job_title == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['title'] = job_title
+        job_company = input("Enter your employer's name: ").title()
+        if job_company == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['employer'] = job_company
+        start = input('Enter date started: ')
+        if start == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['start'] = start
+        end = input('Enter date ended: ')
+        if end == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['end'] = end
+        location = input("Enter your location: ")
+        if location == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['location'] = location
+        descr = input("Enter your job description: ")
+        if descr == 'q':
+          return
+        profiles[user_name]['exp'][f'job{num_jobs}']['descr'] = descr
+        if num_jobs == 3:
+          break
+  profiles[user_name]['num_jobs'] = num_jobs
+  
+# Function to allow user to update their profile
+def update_profile(profiles, user_name, first_name, last_name):
+  if user_name not in profiles.keys():
+    print("\nYou have not created a profile yet. Please build a profile first.")
     return
   
+  print("\nHere is your current profile:")
+  view_profile(profiles, user_name, first_name, last_name)
+  options = list(profiles[user_name].keys())
+  options.remove('num_jobs')
+  print("\nEnter the name of the field you want to update ('exp' to edit job fields)\n")
+  print(f"Your options for fields are : {options}")
+  while True:
+    field = input("Enter the field you wish to edit: ").lower()
+    if field == 'q':
+      break
+    elif field not in options:
+      print("Invalid field. Try again. Enter 'q' to quit.")
+      continue
+    elif field == 'exp':
+      update_work_experience(profiles,user_name)
+      break
+    else:
+      new_field = input(f'Enter new {field}: ')
+      # maintain proper capitalization for university of major fields
+      if field == 'uni' or field == 'major':
+        new_field = new_field.title()
+      profiles[user_name][field] = new_field
+      print("Change successfully saved. Enter 'q' to exit.")
+  
+
+  
+# Function to display the a user's profile
+def view_profile(profiles, user_name, first_name, last_name):
+  if user_name not in profiles.keys():
+    print("\nYou have not created a profile yet. Please build a profile first.")
+    return
+    
   print("\n=================================")
-  print(f"{profiles[user_name]['first_name']} {profiles[user_name]['last_name']}")
+  print(f"{first_name} {last_name}".center(33))
+  print("=================================")
   print("Title: ", profiles[user_name]['title'])
   print("Major: ", profiles[user_name]['major'])
-  print("University: ", profiles['uni'])
-  print("About: ", profiles['about']])
-  count = 1
+  print("University: ", profiles[user_name]['uni'] + ',' + profiles[user_name]['uni_abbr'])
+  print("About: ", profiles[user_name]['about'])
+  
   exp = profiles[user_name]['exp']
-  print("Work Experience: ")
-  for i in exp:
-    print('Job #',count)
-    print('    Title: ', exp['title'])
-    print('    Employer: ', exp['employer'])
-    print('    Start Date: ', exp['start'])
-    print('    End Date: ', exp['end'])
-    print('    Location: ', exp['location'])
-    print('    Description: ', exp['descr'])
-    count += 1
+  if profiles[user_name]['num_jobs'] > 0:
+    print("Work Experience: ")
   count = 1
-  education = profiles[user_name]['education']
-  print('    School: ', exp['school'])
-  print('    Degree: ', exp['degree'])
-  print('    Years Spent: ', exp['yrs'])
-  print("=================================\n")
+  for i in exp:
+    print('  Job #' + str(count))
+    print('    Title: ', exp[f'job{count}']['title'])
+    print('    Employer: ', exp[f'job{count}']['employer'])
+    print('    Start Date: ', exp[f'job{count}']['start'])
+    print('    End Date: ', exp[f'job{count}']['end'])
+    print('    Location: ', exp[f'job{count}']['location'])
+    print('    Description: ', exp[f'job{count}']['descr'])
+    count += 1
+
+  print('Previous Education: ')
+  print('    School: ', profiles[user_name]['school'])
+  print('    Degree: ', profiles[user_name]['degree'])
+  print('    Years Spent: ', profiles[user_name]['yrs'])
+  print("=================================")
+  input("Press enter to proceed. ")
   
 '''Bhuvan Solution
 def view_own_profile(account, conn):
@@ -413,7 +541,7 @@ WHERE user_num = ?;''', (language, account_num + 1))
 
 
 #generate a list all friends of a person
-def all_friends(conn, accounts, account_num):
+def all_friends(conn, accounts, account_num, profiles):
   all_friends = accounts[account_num][9]
   if len(all_friends) == 0:
     print("\nYou have no friends!")
@@ -424,9 +552,45 @@ def all_friends(conn, accounts, account_num):
     all_friends = [accounts[int(i) - 1] for i in all_friends]
     num_friends = len(all_friends)
     count = 1
+    profile_friends = []
+    for i in all_friends:
+      if i[1] in profiles.keys():
+        print('{}). '.format(count), i[3], i[4], '(view profile)')
+        profile_friends.append(count)
+      else:
+        print('{}). '.format(count), i[3], i[4]) 
+      count += 1
+     
+
+    #view friends' profiles
+    while True:
+      view_friend = input("Index of friend to view profile: ('q' to quit) ")
+      if view_friend == 'q':
+        break
+      else:
+        try:
+          view_friend = int(view_friend)
+          if view_friend not in profile_friends:
+            raise ValueError
+        except ValueError:
+          print("\nPlease enter a valid number of a friend who has a profile.")
+          continue
+        view_profile(profiles,all_friends[view_friend-1][1],all_friends[view_friend-1][3],all_friends[view_friend-1][4])
+        count = 1
+        for i in all_friends:
+          if i[1] in profiles.keys():
+            print('{}). '.format(count), i[3], i[4], '(view profile)')
+          else:
+            print('{}). '.format(count), i[3], i[4]) 
+          count += 1
+
+    
+    print("\nHere are your friends:")
+    count = 1
     for i in all_friends:
       print('{}). '.format(count), i[3], i[4])
       count += 1
+    
     delete = input("Do you wish to disconnect from someone? ('y' or 'n') ")
     while delete != 'n' and delete != 'y':
       delete = input("Invalid input. Enter ('y' or 'n') ")
@@ -699,26 +863,6 @@ def display_video():
   if video == "yes":
     print("\nVideo is now playing.\n")
 
-
-#Account class data structure to hold the username and password of each of the five college accounts (for future use)
-class Account:
-  num_accounts = 0
-
-  def __init__(self, username, password, first_name, last_name):
-    self.username = username
-    self.password = password
-    self.first_name = first_name
-    self.last_name = last_name
-    # ================== EPIC 5 ====================
-    self.title = ""
-    self.major = ""
-    self.university = ""
-    self.about = ""
-    self.experience = []  # List of dictionaries to store experience
-    self.education = []  # List of dictionaries to store education
-    # ==============================================
-
-
 #Function to print initial menu screen
 def print_menu():
   print(
@@ -925,6 +1069,8 @@ def log_in(conn, accounts, num_accounts, jobs, profiles):
       print("Enter '8' to see useful links")
       print("Enter '9' to see important InCollege links")
       print("Enter '10' to view your profile")
+      print("Enter '11' to build a new profile")
+      print("Enter '12' to update existing profile")
       print("Enter '0' to log out and exit.")
       try:
         choice_4 = int(input("Your choice: "))
@@ -955,7 +1101,7 @@ def log_in(conn, accounts, num_accounts, jobs, profiles):
 
       #generate a list of all your friends
       elif choice_4 == 4:
-        all_friends(conn, accounts, account_num)
+        all_friends(conn, accounts, account_num, profiles)
         conn.commit()
         accounts = all_accounts(conn)
 
@@ -1046,12 +1192,29 @@ def log_in(conn, accounts, num_accounts, jobs, profiles):
         navigate_inCollege_links(conn, accounts, account_num, True)
         
       elif choice_4 == 10:
-        view_profile(profiles,user_name)
-        
+        view_profile(profiles,user_name,first_name,last_name)
+
+      elif choice_4 == 11:
+        build_profile(profiles,user_name,first_name,last_name)
+        new_uni = ','.join([profiles[user_name]['uni'],profiles[user_name]['uni_abbr']])
+        new_major = profiles[user_name]['major']
+        if (new_uni != accounts[account_num][7]) or (new_major != accounts[account_num][8]):
+          update_db_uni_major(conn,user_name,new_uni,new_major)
+          accounts = all_accounts(conn)
+
+      elif choice_4 == 12:
+        update_profile(profiles,user_name,first_name,last_name)
+        if user_name in profiles.keys():
+          new_uni = ','.join([profiles[user_name]['uni'],profiles[user_name]['uni_abbr']])
+          new_major = profiles[user_name]['major']
+          if (new_uni != accounts[account_num][7]) or (new_major != accounts[account_num][8]):
+            update_db_uni_major(conn,user_name,new_uni,new_major)
+            accounts = all_accounts(conn)
+          
       elif choice_4 == 0:
-        print(
-            "\nYou have successfully logged out.\nThank you for using InCollege!\n"
-        )
+        print("\nYou have successfully logged out.\nThank you for using InCollege!\n")
+        with open("profiles.json", "w") as file:
+          json.dump(profiles, file)
         break
       else:
         print("Not understood. Try again.")
@@ -1129,7 +1292,7 @@ def register_user(conn, accounts, num_accounts):
 
 
 #drives the sign in screen which users can use to sign in or register and acccount
-def sign_in_screen(conn, accounts, num_accounts, jobs):
+def sign_in_screen(conn, accounts, num_accounts, jobs, profiles):
   while True:
     print(
         "\nEnter '1' to sign in to an existing account\nEnter '2' to register a new account\nEnter '0' to go back"
@@ -1164,10 +1327,12 @@ def main():
   accounts = all_accounts(conn)
   num_accounts = len(accounts)
   jobs = all_jobs(conn)
-  #uncomment following line to see current contents of database
-  print(accounts)
+  #uncomment following line to see current contents of accounts table
+  #print(accounts)
   #load profiles into a python dictionary
   profiles = load_profiles()
+  #uncomment following line to see current contents of profiles dictionary
+  #print(profiles)
 
   #opening page of application
   print("===================================================")
@@ -1192,7 +1357,7 @@ def main():
     #user chooses to log in to the app
     if choice == 1:
       accounts, num_accounts = sign_in_screen(conn, accounts, num_accounts,
-                                              jobs)
+                                              jobs, profiles)
 
     #allow not logged in user to search for InCollege members
     elif choice == 2:
@@ -1226,7 +1391,7 @@ def main():
             elif choice == 7:
               #sign in screen
               accounts, num_accounts = sign_in_screen(conn, accounts,
-                                                      num_accounts, jobs)
+                                                      num_accounts, jobs, profiles)
             elif choice == 8:
               break
             else:
