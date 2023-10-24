@@ -34,6 +34,7 @@ from main import (
   update_db_uni_major,
   build_profile,
   update_work_experience,
+  update_profile,
   view_profile
 )
 
@@ -590,3 +591,203 @@ def test_update_db_uni_major():
     # Close the database connection
     conn.close()
 
+# Defining a test for build_profile()
+def test_build_profile(monkeypatch):
+  user_input = iter(["Your Title", "Computer Science", "Your University", "UO", "About me", "n", "School Name", "BSc", "4", "q"])
+  monkeypatch.setattr('builtins.input', lambda _: next(user_input))
+
+  # defining the profiles dictionary for .json
+  profiles = {}
+  user_name = "your_username"
+  first_name = "YourFirstName"
+  last_name = "YourLastName"
+
+  build_profile(profiles, user_name, first_name, last_name)
+
+  # Assertions
+  assert profiles[user_name]['title'] == "Your Title"
+  assert profiles[user_name]['major'] == "Computer Science"
+  assert profiles[user_name]['uni'] == "Your University"
+  assert profiles[user_name]['uni_abbr'] == "UO"
+  assert profiles[user_name]['about'] == "About me"
+  assert profiles[user_name]['num_jobs'] == 0  # Since "n" was entered, no jobs should be added.
+  assert profiles[user_name]['school'] == "School Name"
+  assert profiles[user_name]['degree'] == "BSc"
+  assert profiles[user_name]['yrs'] == "4"
+
+def test_update_profile(monkeypatch):  
+  def test_update_profile(capsys):
+    # Mocked profiles data
+    profiles = {
+        'john_doe': {
+            'title': 'Software Developer',
+            'major': 'Computer Science',
+            'uni': 'University of ABC',
+            'uni_abbr': 'UABC',
+            'about': 'I am a software developer.',
+            'school': 'XYZ School',
+            'degree': 'Bachelor of Science',
+            'yrs': '2016-2020',
+            'num_jobs': 0
+        }
+    }
+  
+    user_name = 'john_doe'
+    first_name = 'John'
+    last_name = 'Doe'
+
+    # Simulated user input
+    input_values = [
+        'q\n'  # Quit without making any changes
+    ]
+    # Define a function to mock the user input
+    def mocked_input(_):
+        return input_values.pop(0)
+    # Store the original input function
+    original_input = __builtins__["input"]
+    # Replace the input function with the mocked version
+    __builtins__["input"] = mocked_input
+
+    # Capture the output of the function using capsys
+    update_profile(profiles, user_name, first_name, last_name)
+    captured = capsys.readouterr()
+
+    # Assert the captured output matches the expected output
+    assert captured.out == "\nHere is your current profile:\n" \
+                          "=================================\n" \
+                          "     John Doe     \n" \
+                          "=================================\n" \
+                          "Title:  Software Developer\n" \
+                          "Major:  Computer Science\n" \
+                          "University:  University of ABC,UABC\n" \
+                          "About:  I am a software developer.\n" \
+                          "Previous Education: \n" \
+                          "    School:  XYZ School\n" \
+                          "    Degree:  Bachelor of Science\n" \
+                          "    Years Spent:  2016-2020\n" \
+                          "=================================\n" \
+                          "Enter the name of the field you want to update ('exp' to edit job fields)\n" \
+                          "Your options for fields are : ['title', 'major', 'uni', 'uni_abbr', 'about', 'school', 'degree', 'yrs']\n" \
+                          "Enter 'q' to quit.\n" \
+                          "Change successfully saved. Enter 'q' to exit.\n"
+    # Restore the original input function
+    __builtins__["input"] = original_input
+    # Assertions
+    assert profiles[user_name]['title'] == 'Software Developer'
+    assert profiles[user_name]['major'] == 'Computer Science'
+    assert profiles[user_name]['uni'] == 'University of ABC'
+    assert profiles[user_name]['uni_abbr'] == 'UABC'
+    assert profiles[user_name]['about'] == 'I am a software developer.'
+    assert profiles[user_name]['school'] == 'XYZ School'
+    assert profiles[user_name]['degree'] == 'Bachelor of Science'
+    assert profiles[user_name]['yrs'] == '2016-2020'
+    assert profiles[user_name]['num_jobs'] == 0
+
+def test_view_profile(monkeypatch):
+  def test_view_profile(capsys):
+    # Mocked profiles data
+    profiles = {
+      'john_doe':{
+        'title': 'Software Developer',
+        'major': 'Computer Science',
+        'uni': 'University of South Florida',
+        'uni_abbr': 'USF',
+        'about': 'I enjoy programming and building software.',
+        'exp': {
+          'job1': {
+            'title': 'Junior Developer',
+            'employer': 'Tech Inc.',
+            'start': '2019',
+            'end': '2021',
+            'location': 'San Francisco, CA',
+            'descr': 'Worked on web application development.',
+            },
+          'job2': {
+              'title': 'Software Engineer',
+              'employer': 'SoftSys Solutions',
+              'start': '2021',
+              'end': '2023',
+              'location': 'New York, NY',
+              'descr': 'Developed software solutions for clients.',
+            },
+          },
+          'school': 'College of Engineering',
+          'degree': 'Bachelor of Science',
+          'yrs': '2015-2019',
+          'num_jobs': 2
+        }
+    }
+  
+    user_name = 'john_doe'
+    first_name = 'John'
+    last_name = 'Doe'
+    # Call the view_profile function with the given profiles
+    view_profile(profiles, user_name, first_name, last_name)
+    captured = capsys.readouterr()
+     # Define the expected output to compare with the captured output
+    expected_output = (
+        "\n=================================\n"
+        "      John Doe      \n"
+        "=================================\n"
+        "Title:  Software Engineer\n"
+        "Major:  Computer Science\n"
+        "University:  University of South Florida,USF\n"
+        "About:  I enjoy programming and building software.\n"
+        "Work Experience: \n"
+        "  Job #1\n"
+        "    Title:  Junior Developer\n"
+        "    Employer:  Tech Inc.\n"
+        "    Start Date: 2019\n"
+        "    End Date: 2021\n"
+        "    Location: San Francisco, CA\n"
+        "    Description:  Worked on web application development.\n"
+        "  Job #2\n"
+        "    Title:  Software Engineer\n"
+        "    Employer:  SoftSys Solutions\n"
+        "    Start Date: 2021\n"
+        "    End Date: 2023\n"
+        "    Location: New York, NY\n"
+        "    Description:  Developed software solutions for clients.\n"
+        "Previous Education: \n"
+        "    School:  College of Engineering\n"
+        "    Degree:  Bachelor of Science\n"
+        "    Years Spent: 2015-2019\n"
+        "=================================\n"
+    )
+
+    # Assert that the captured output matches the expected output
+    assert captured.out == expected_output
+
+def test_update_work_experience(monkeypatch):
+  user_name = "your_username"
+  # Mocked profiles data
+  profiles = {
+      user_name: {
+          'num_jobs': 1,
+          'exp': {
+              'job1': {
+                  'title': 'Junior Developer',
+                  'employer': 'Tech Inc.',
+                  'start': '2019',
+                  'end': '2021',
+                  'location': 'San Francisco, CA',
+                  'descr': 'Worked on web application development.',
+              }
+          }
+      }
+  }
+
+  # Define user input to simulate user interaction
+  user_input = iter(["e", "1", "employer", "Ksmalll", "q"])
+  monkeypatch.setattr('builtins.input', lambda _: next(user_input))
+
+  # Calling the function with mocked profiles and user input
+  update_work_experience(profiles, user_name)
+
+  # Assertions
+  assert profiles[user_name]['exp']['job1']['employer'] == "Ksmalll"
+
+
+
+
+  
