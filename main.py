@@ -12,7 +12,7 @@ def create_db():
   # Create a cursor object to execute SQL commands
   cursor = conn.cursor()
 
-  # Execute a SQL command to create the main accounts table
+# Execute a SQL command to create the main accounts table
   cursor.execute('''
       CREATE TABLE IF NOT EXISTS accounts (
           user_num INTEGER PRIMARY KEY,
@@ -29,7 +29,7 @@ def create_db():
           invites_received TEXT
           )
   ''')
-  # Execute SQL command to create a table storing posted jobs
+# Execute SQL command to create a table storing posted jobs
   cursor.execute('''
       CREATE TABLE IF NOT EXISTS jobs (
           job_num INTEGER PRIMARY KEY,
