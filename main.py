@@ -172,7 +172,7 @@ def build_profile(profiles, user_name, first_name, last_name):
   else:
     print('About:',profiles[user_name]['about'])
   
-  #enter a job, for up to three jobs
+  #enter a job, for up to ten jobs
   num_jobs = profiles[user_name]['num_jobs']
   if num_jobs == 0:
     num_changes += 1
@@ -182,7 +182,7 @@ def build_profile(profiles, user_name, first_name, last_name):
     if job_choice == 'q':
       return
     elif job_choice == 'y':   
-      while num_jobs < 3:
+      while num_jobs < 11:
         num_jobs += 1
         #initialize job fields to empty
         profiles[user_name]['exp'][f'job{num_jobs}'] = {}
@@ -216,7 +216,7 @@ def build_profile(profiles, user_name, first_name, last_name):
         if descr == 'q':
           return
         profiles[user_name]['exp'][f'job{num_jobs}']['descr'] = descr
-        if num_jobs == 3:
+        if num_jobs == 10:
           break
           # ask if user wishes to enter another job
         job_choice = input("Would you like to enter another work experience? ('y' or 'n') ")
@@ -225,7 +225,7 @@ def build_profile(profiles, user_name, first_name, last_name):
         if job_choice == 'q':
           return
         elif job_choice == 'y':
-          if num_jobs == 3:
+          if num_jobs == 10:
             break
           continue
         else:
@@ -267,7 +267,7 @@ def build_profile(profiles, user_name, first_name, last_name):
   else:
     print("\nProfile saved! ")
 
-# Function to allow user to add a work experience (up to max of 3)
+# Function to allow user to add a work experience (up to max of 10)
 def update_work_experience(profiles, user_name):
   num_jobs = profiles[user_name]['num_jobs']
   while True:
@@ -303,8 +303,8 @@ def update_work_experience(profiles, user_name):
           new_field = input(f'Enter new {field}: ')
           profiles[user_name]['exp'][f"job{job_num}"][field] = new_field
           print("Change successfully saved. Enter 'q' to exit.")
-    elif add_or_edit == 'a' and num_jobs >= 3:
-      print("Maximum jobs allowed is 3. Please edit existing job.")
+    elif add_or_edit == 'a' and num_jobs >= 10:
+      print("Maximum jobs allowed is 10. Please edit existing job.")
       break  
     else:
         num_jobs += 1
@@ -340,7 +340,7 @@ def update_work_experience(profiles, user_name):
         if descr == 'q':
           return
         profiles[user_name]['exp'][f'job{num_jobs}']['descr'] = descr
-        if num_jobs == 3:
+        if num_jobs == 10:
           break
   profiles[user_name]['num_jobs'] = num_jobs
   
