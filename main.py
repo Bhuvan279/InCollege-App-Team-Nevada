@@ -29,7 +29,7 @@ def create_db():
           invites_received TEXT
           )
   ''')
-# Execute SQL command to create a table storing posted jobs
+# Execute SQL command to create a table storing posted jobs - added a column to account for jobs marked as applied for
   cursor.execute('''
       CREATE TABLE IF NOT EXISTS jobs (
           job_num INTEGER PRIMARY KEY,
@@ -39,11 +39,35 @@ def create_db():
           description TEXT,
           employer TEXT,
           location TEXT,
-          salary FLOAT)
+          salary FLOAT,
+          applied BOOLEAN DEFAULT FALSE)
   ''')
-  
+
   return conn
 
+# function to delete a job posting from the database using SQL, job_num is the number of the desired job to delete
+def delete_job(conn, job_num):
+  cursor = conn.cursor()  
+  cursor.execute('DELETE FROM jobs WHERE job_num = ?', (job_num,))
+  conn.commit()
+
+# function to mark a job as "saved" for a specified user
+def save_job(conn, user_num, job_num):
+  cursor = conn.cursor()
+  cursor.execute('INSERT INTO saved_jobs (user_num, job_num) VALUES (?, ?)', (user_num, job_num))
+  conn.commit()
+
+# function to provide a list of saved jobs for a specified user
+def get_saved_jobs(conn, user_num):
+  cursor = conn.cursor()
+  cursor.execute('SELECT * FROM jobs INNER JOIN saved_jobs ON jobs.job_num = saved_jobs.job_num WHERE saved_jobs.user_num = ?', (user_num,))
+  return cursor.fetchall()
+
+# function to unmark a job from being "saved" for a specified user
+def unsave_job(conn, user_num, job_num):
+  cursor = conn.cursor()
+  cursor.execute('DELETE FROM saved_jobs WHERE user_num = ? AND job_num = ?', (user_num, job_num))
+  conn.commit()
 
 #retrieve all accounts from database
 def all_accounts(conn):
@@ -52,6 +76,24 @@ def all_accounts(conn):
   rows = cursor.fetchall()
   return rows
 
+# function to mark a job as "applied"
+def apply_job(conn, cursor, job_num):
+  cursor.execute("UPDATE jobs SET applied = TRUE WHERE job_num = ?", (job_num,))
+  conn.commit() 
+
+# function to display a list of all jobs applied for to the user
+def get_applied_jobs(conn):
+  cursor = conn.cursor()
+  cursor.execute('SELECT * FROM jobs WHERE applied = TRUE')
+  applied_jobs = cursor.fetchall()
+  return applied_jobs
+
+# function to display a list of all jobs not yet applied for
+def get_unapplied_jobs(conn):
+  cursor = conn.cursor()
+  cursor.execute('SELECT * FROM jobs WHERE applied = FALSE')
+  unapplied_jobs = cursor.fetchall()
+  return unapplied_jobs
 
 #retrieve all jobs from database
 def all_jobs(conn):
