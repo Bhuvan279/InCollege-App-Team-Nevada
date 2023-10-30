@@ -30,22 +30,31 @@ def create_db():
           )
   ''')
 # Execute SQL command to create a table storing posted jobs - added a column to account for jobs marked as applied for
+  
   cursor.execute('''
       CREATE TABLE IF NOT EXISTS jobs (
           job_num INTEGER PRIMARY KEY,
-          first_name INTEGER,
-          last_name INTEGER,
+          user_num INTEGER, 
+          first_name TEXT,
+          last_name TEXT,
           title TEXT,
           description TEXT,
           employer TEXT,
           location TEXT,
-          salary FLOAT,
+          salary TEXT,
           applied BOOLEAN DEFAULT FALSE)
   ''')
 
   return conn
 
 # function to delete a job posting from the database using SQL, job_num is the number of the desired job to delete
+
+def all_job_list(conn, user_num):
+  cursor = conn.cursor()  
+  cursor.execute('SELECT * FROM jobs WHERE user_num = ?', (user_num,))
+  jobs = cursor.fetchall()
+  return jobs
+
 def delete_job(conn, job_num):
   cursor = conn.cursor()  
   cursor.execute('DELETE FROM jobs WHERE job_num = ?', (job_num,))
@@ -452,38 +461,11 @@ def view_profile(profiles, user_name, first_name, last_name):
   print('    Years Spent: ', profiles[user_name]['yrs'])
   print("=================================")
   input("Press enter to proceed. ")
-  
-'''Bhuvan Solution
-def view_own_profile(account, conn):
-  cursor = conn.cursor()
-  cursor.execute("SELECT * FROM profiles WHERE user_name = ?;", (account[0][1],))
-  
-  profile = cursor.fetchone()
-  if profile:
-    print("\nYour Profile:\n")
-    print(f"================\n{account[0][3]} {account[0][4]}{account[0][3]}\n")
-    print(f"Title: {profile[2]}")
-    print(f"Major: {profile[3]}")
-    print(f"University: {profile[4]}")
-    print(f"About: {profile[5]}")
-
-    choice = input("Would you like to make any changes to your profile? (y/n): ")
-
-    if choice == "y":
-      update_profile(account, profile, conn)
-    else:
-      print("No changes made.")
-  else:
-    print("You don't have a profile. Create one first.")
-    create_profile(account, conn)'''
-
-
-# ===============================================================
 
 
 #post a job to the jobs table in accounts database
 def post_job(conn, first_name, last_name, title, descr, employer, location,
-             salary):
+             salary, user_num):
   cursor = conn.cursor()
   jobs = all_jobs(conn)
   #do not permit the 6th job entry, only 5 jobs allowed
@@ -492,9 +474,9 @@ def post_job(conn, first_name, last_name, title, descr, employer, location,
     return False
   cursor.execute(
       '''
-    INSERT INTO jobs (first_name,last_name,title,description,employer,location, salary)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-''', (first_name, last_name, title, descr, employer, location, salary))
+    INSERT INTO jobs (user_num, first_name,last_name,title,description,employer,location, salary)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+''', (user_num, first_name, last_name, title, descr, employer, location, salary))
   return True
 
 
@@ -895,7 +877,7 @@ def find_someone(conn, accounts, logged_in_user):
         print("Invalid input. Please enter a valid number.")
 
 
-#display option to show marketing video when starting application
+# display option to show marketing video when starting application
 def display_video():
   video = input(
       "Would you like to watch a video of why you should join InCollege? (yes/no): "
@@ -1108,11 +1090,12 @@ def log_in(conn, accounts, num_accounts, jobs, profiles):
       print("Enter '5' generate list of pending friend requests")
       print("Enter '6' to learn a new skill")
       print("Enter '7' to post a job")
-      print("Enter '8' to see useful links")
-      print("Enter '9' to see important InCollege links")
-      print("Enter '10' to view your profile")
-      print("Enter '11' to build a new profile")
-      print("Enter '12' to update existing profile")
+      print("Enter '8' to delete a job")
+      print("Enter '9' to see useful links")
+      print("Enter '10' to see important InCollege links")
+      print("Enter '11' to view your profile")
+      print("Enter '12' to build a new profile")
+      print("Enter '13' to update existing profile")
       print("Enter '0' to log out and exit.")
       try:
         choice_4 = int(input("Your choice: "))
@@ -1187,12 +1170,31 @@ def log_in(conn, accounts, num_accounts, jobs, profiles):
         employer_name = input("Please enter name of the employer: ")
         job_location = input("Please enter the job location: ")
         job_salary = float(input("Please enter the salary: $"))
-        if(post_job(conn,first_name,last_name,job_title,job_description,\
-                 employer_name, job_location, job_salary)):
+        user_num = accounts[account_num][0]
+        if(post_job(conn,first_name,last_name,job_title,job_description,
+                 employer_name, job_location, job_salary, user_num)):
           conn.commit()
         print("\nJob successfully posted under your name!\n")
       #useful links
       elif choice_4 == 8:
+        print("Which Job would you like to delete")
+        user_num = accounts[account_num][0]
+        jobs = all_job_list(conn, user_num)
+
+        for job in jobs:
+          print(f"({job[0]} , {job[2]}, {job[3]}, {job[4]}, {job[5]}, {job[6]}, {job[7]} \n)")
+
+        choice = int(input("Enter the job ID of the job you want to delete"))
+        loop = True
+        
+        while(loop):
+          for job in jobs:
+            if choice == job[0]:
+              loop = False
+          choice = int(input("Job ID does not exist. Try again! "))
+        
+
+      elif choice_4 == 9: 
         while True:
           print_useful_links()
           try:
@@ -1230,13 +1232,13 @@ def log_in(conn, accounts, num_accounts, jobs, profiles):
             print("Not understood. Try again.")
 
       #important InCollege links
-      elif choice_4 == 9:
+      elif choice_4 == 10:
         navigate_inCollege_links(conn, accounts, account_num, True)
         
-      elif choice_4 == 10:
+      elif choice_4 == 11:
         view_profile(profiles,user_name,first_name,last_name)
 
-      elif choice_4 == 11:
+      elif choice_4 == 12:
         build_profile(profiles,user_name,first_name,last_name)
         new_uni = ','.join([profiles[user_name]['uni'],profiles[user_name]['uni_abbr']])
         new_major = profiles[user_name]['major']
@@ -1244,7 +1246,7 @@ def log_in(conn, accounts, num_accounts, jobs, profiles):
           update_db_uni_major(conn,user_name,new_uni,new_major)
           accounts = all_accounts(conn)
 
-      elif choice_4 == 12:
+      elif choice_4 == 13:
         update_profile(profiles,user_name,first_name,last_name)
         if user_name in profiles.keys():
           new_uni = ','.join([profiles[user_name]['uni'],profiles[user_name]['uni_abbr']])
