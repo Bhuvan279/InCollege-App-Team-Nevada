@@ -35,7 +35,10 @@ from main import (
   build_profile,
   update_work_experience,
   update_profile,
-  view_profile
+  view_profile,
+  search_for_job,
+  all_user_job_list,
+  all_job_list
 )
 
 
@@ -185,19 +188,22 @@ def test_post_job():
   jobs = all_jobs(conn)
   prev_num_jobs = len(jobs)
   post_job(conn,first_name,last_name,title,description,\
-                     employer, location, salary)
+                     employer, location, salary, 1)
   jobs = all_jobs(conn)
   new_num_jobs = len(jobs)
   
   # Assert
   assert new_num_jobs == prev_num_jobs + 1
-  assert jobs[-1][1] == 'test_user'
-  assert jobs[-1][2] == 'Test123!'
-  assert jobs[-1][3] == 'Software Engineer'
-  assert jobs[-1][4] == 'Code your pants off'
-  assert jobs[-1][5] == 'JP Morgan Chase'
-  assert jobs[-1][6] == 'Tampa, FL'
-  assert jobs[-1][7] == 150000.0
+  assert jobs[-1][1] == 1
+  assert jobs[-1][2] == 'test_user'
+  assert jobs[-1][3] == 'Test123!'
+  assert jobs[-1][4] == 'Software Engineer'
+  assert jobs[-1][5] == 'Code your pants off'
+  assert jobs[-1][6] == 'JP Morgan Chase'
+  assert jobs[-1][7] == 'Tampa, FL'
+  assert jobs[-1][8] == '150000.0'
+
+  
 
 
 # ========================================================#
@@ -789,5 +795,61 @@ def test_update_work_experience(monkeypatch):
 
 
 
+# ========================================================#
+# ==========Epic 6 test cases as of 10/30/2023============#
+# ========================================================#
 
+@pytest.fixture
+def temp_db():
+    conn = sqlite3.connect("accounts.db")
+    cursor = conn.cursor()
+
+    # Create a jobs table for testing
+    try:
+      cursor.execute('''
+      CREATE TABLE jobs (
+          id INTEGER PRIMARY KEY,
+          user_num INTEGER,
+          title TEXT,
+          description TEXT
+      )''')
+    except sqlite3.OperationalError:
+      pass
+
+    # Insert test data into the jobs table
+    cursor.execute('INSERT INTO jobs (user_num, title, description) VALUES (?, ?, ?)', (1, 'Job 1', 'Description 1'))
+    cursor.execute('INSERT INTO jobs (user_num, title, description) VALUES (?, ?, ?)', (2, 'Job 2', 'Description 2'))
+    cursor.execute('INSERT INTO jobs (user_num, title, description) VALUES (?, ?, ?)', (1, 'Job 3', 'Description 3'))
+
+    yield conn
+    conn.close()
+
+# Test the all_user_job_list function
+def test_all_user_job_list(temp_db):
+    user_num = 1  # Replace with the user number you want to test
+
+    # Call the all_user_job_list function
+    jobs = all_user_job_list(temp_db, user_num)
+
+    # Assert that the result matches the expected job count for the specified user
+    assert len(jobs) == 2
+
+    # Assert that the titles and descriptions of the retrieved jobs match the expected values
+    assert jobs[0][2] == 'Job 1'
+    assert jobs[0][3] == 'Description 1'
+    assert jobs[1][2] == 'Job 3'
+    assert jobs[1][3] == 'Description 3'
+
+
+def test_all_job_list(temp_db):
+    jobs = all_job_list(temp_db)
+
+    assert len(jobs) == 3
+
+    expected_titles = ['Job 1', 'Job 2', 'Job 3']
+    expected_descriptions = ['Description 1', 'Description 2', 'Description 3']
+
+    for i, job in enumerate(jobs):
+      assert job[2] == expected_titles[i]
+      assert job[3] == expected_descriptions[i]
   
