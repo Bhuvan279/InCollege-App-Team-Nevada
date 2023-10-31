@@ -116,14 +116,8 @@ def apply_job(conn, job_num, user_num):
 # function to display a list of all jobs applied for by the user
 def get_applied_jobs(conn,user_num):
   cursor = conn.cursor()
-  jobs = all_jobs(conn)
-  cursor.execute('SELECT job_num FROM applications WHERE user_num = ?', (user_num,))
-  applied_job_nums = cursor.fetchall()
-  applied_jobs = []
-  for i in jobs:
-    if i[0] in applied_job_nums:
-      applied_jobs.append(i)
-  return applied_jobs
+  cursor.execute('SELECT * FROM jobs INNER JOIN applications ON jobs.job_num = applications.job_num WHERE applications.user_num = ?', (user_num,))
+  return cursor.fetchall()
 
 # function to display a list of all jobs not yet applied for
 def get_unapplied_jobs(conn,user_num):
@@ -973,28 +967,34 @@ def print_inCollege_links():
 #======================Epic 6 - Jobs=======================#
 def save_job(user_num, job_num, conn):
   cursor = conn.cursor()
+  cursor.execute("SELECT job_num FROM saved_jobs WHERE user_num = ?",(user_num,))
+  saved_jobs = cursor.fetchall()
+  #print(saved_jobs)
+  if (job_num,) in saved_jobs:
+    print("\nYou have already saved this job!\n")
+    return False
   cursor.execute("SELECT * FROM jobs WHERE job_num = ? ", (job_num,))
   interested_job = cursor.fetchone()
   cursor.execute(
   "INSERT INTO saved_jobs (user_num, job_num, job_title, company_name) VALUES (?, ?, ?, ?)",
   (user_num, job_num, interested_job[4], interested_job[5],))
-  print(" The job has been saved.")
+  print(" \nThe job has been saved.\n")
+  return True
 
 
 
 # apply for a job
 def apply_for_job(user_num, job_num, conn):
   cursor = conn.cursor()
+  cursor.execute("SELECT job_num FROM applications WHERE user_num = ?",(user_num,))
+  applied_job_nums = cursor.fetchall()
+  #print(applied_job_nums)
+  if (job_num,) in applied_job_nums:
+    print("\nYou have already applied for this job!\n")
+    return False
+
   cursor.execute("SELECT * FROM jobs WHERE job_num = ? ", (job_num,))
   interested_job = cursor.fetchone()
-  cursor.execute("SELECT job_num FROM applications WHERE user_num = ?",(user_num))
-  applied_job_nums = cursor.fetchall()
-  if user_num == interested_job[1]:
-    print("You cannot apply for a job you have posted!")
-    return False
-  elif job_num in applied_job_nums:
-    print("You have already applied for this job!")
-    return False
   #print(interested_job)
   while (True):
     grad_date = input("When is your graduation date?\nEnter in mm/dd/yyyy format: ")
@@ -1014,11 +1014,10 @@ def apply_for_job(user_num, job_num, conn):
 
   cursor.execute(
       "INSERT INTO applications (user_num, job_num, job_title, company_name, graduation_date, when_to_start, why_good_fit) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      (user_num, job_num, interested_job[0][4], interested_job[0][6], grad_date, when_to_start, why_good_fit,))
+      (user_num, job_num, interested_job[4], interested_job[6], grad_date, when_to_start, why_good_fit,))
+  print("\nApplication has been successfully added\n")
+  return True
   
-
-  print("Application has been successfully added")
-
 # display a list of all jobs and allow user to apply for them
 def search_for_job(user_num, conn):
   print("\nHere are all the jobs in the system: ")
@@ -1026,16 +1025,22 @@ def search_for_job(user_num, conn):
   go_back = False
   
   while(True):
+    applied_list = get_applied_jobs(conn,user_num)
+    applied_nums = [i[0] for i in applied_list]
     job_ids = []
     for job in jobs:
       job_ids.append(job[0])
-      print(f"{job[0]} : {job[4]} at {job[6]}")
+      if job[0] in applied_nums:
+        print(f"{job[0]} : {job[4]} at {job[6]} (applied)")
+      else:
+        print(f"{job[0]} : {job[4]} at {job[6]}")
 
     try:
       choice = int(input("\nEnter the job ID of the job you want \nto explore or '0' to go back: "))
     except ValueError:
-      print("Invalid input. Enter '0' to go back: ")
-      choice = -1
+      print("Invalid input! \n ")
+      continue
+      
 
     while(True):
       if choice in job_ids:
@@ -1057,22 +1062,56 @@ def search_for_job(user_num, conn):
         print(f"Salary: {job[9]}")
 
         apply_or_not = input("Would you like to apply for this role or save this job?\n(y/n for apply, s for save) ")
-
+        while apply_or_not not in ['n','y','s']:
+          print("Invalid input: Enter y/n/s: ")
         if apply_or_not == 'y':
           if user_num == job[1]:
             print("\nYou cannot apply for a job you have posted! \n")
             return False
           else:
-            apply_for_job(user_num, job[0], conn)
+            if (apply_for_job(user_num, job[0], conn)):
+              conn.commit()
             break
         elif apply_or_not == 's':
           if user_num == job[1]:
             print("\nYou cannot save a job you have posted! \n")
             return False
           else:
-            save_job(user_num, job[0], conn)
+            if (save_job(user_num, job[0], conn)):
+              conn.commit()
             break
-          
+        else: 
+          print()
+
+# function to return a list of applied for and deleted jobs
+def check_deleted_jobs(conn, user_num):
+  cursor = conn.cursor()
+  deleted_jobs = []
+  cursor.execute("SELECT job_num FROM jobs")
+  job_nums = cursor.fetchall()
+  cursor.execute("SELECT job_num FROM applications WHERE user_num = ?",(user_num,))
+  applied_job_nums = cursor.fetchall()
+  for i in applied_job_nums:
+    if i not in job_nums:
+      cursor.execute("SELECT * FROM applications WHERE user_num = ? AND job_num = ?",(user_num, i[0]))
+      deleted_job = cursor.fetchone()
+      deleted_jobs.append(deleted_job)
+      cursor.execute("DELETE FROM applications WHERE user_num = ? AND job_num = ?",(user_num, i[0]))
+  return deleted_jobs
+
+# function to return a list of saved and deleted jobs
+def check_deleted_saved(conn, user_num):
+  cursor = conn.cursor()
+  saved_jobs = []
+  cursor.execute("SELECT job_num FROM jobs")
+  job_nums = cursor.fetchall()
+  cursor.execute("SELECT job_num FROM saved_jobs where user_num = ?",(user_num,))
+  saved_job_nums = cursor.fetchall()
+  for i in saved_job_nums:
+    if i not in job_nums:
+      saved_jobs.append(i[0])
+      cursor.execute("DELETE FROM saved_jobs WHERE user_num = ? AND job_num = ?",(user_num, i[0]))
+  return saved_jobs
 #=============================================================#
 
 #navigate important InCollege links
@@ -1254,9 +1293,21 @@ def log_in(conn, accounts, num_accounts, jobs, profiles):
 
       # all functions related to jobs
       if choice_4 == 1:
+        #check if job they have applied for has been deleted
+        deleted_jobs = check_deleted_jobs(conn, user_num)
+        if len(deleted_jobs) > 0:
+          for i in deleted_jobs: 
+            print(f"\nYou had applied for Job ID {i[2]} with Job title: {i[3]} but this job has been deleted by employer.\n")
+        else:
+          pass
+
+        #check if job they have saved for have been deleted
+        check_deleted_saved(conn, user_num)
+        conn.commit()
+        
         while True:
           print(
-              "\n-->Enter 1 to search for a job\n-->Enter 2 post a new job\n-->Enter 3 to delete a job\n-->Enter 4 to generate a list of applied jobs\n-->Enter 5 to generate a list of saved jobs\n-->Enter 0 to return to the previous screen\n"
+              "\n-->Enter 1 to search and apply for a job\n-->Enter 2 post a new job\n-->Enter 3 to delete a job\n-->Enter 4 to generate a list of applied jobs\n-->Enter 5 to generate a list of saved jobs\n-->Enter 0 to return to the previous screen\n"
           )
           try:
             choice = int(input("Enter job option number: "))
@@ -1328,7 +1379,7 @@ def log_in(conn, accounts, num_accounts, jobs, profiles):
               continue
             print("Here is a list of all jobs you have applied for: ")
             for i in applied_list:
-              print(f"Job ID: {i[0]} , Job Title: {i[4]}, Job Description: {i[5]}, Employer Name: {i[6]}, Job Location: {i[7]}, Job Salary: {i[8]}")
+              print(f"-->Job ID: {i[0]} , Job Title: {i[4]}, Job Description: {i[5]}, Employer Name: {i[6]}, Job Location: {i[7]}, Job Salary: {i[8]}")
           #generate list of all saved jobs
           elif choice == 5:
             saved_list = get_saved_jobs(conn,user_num)
@@ -1337,7 +1388,7 @@ def log_in(conn, accounts, num_accounts, jobs, profiles):
               continue
             print("Here is a list of all jobs you have saved: ")
             for i in saved_list:
-              print(f"Job ID: {i[0]} , Job Title: {i[4]}, Job Description: {i[5]}, Employer Name: {i[6]}, Job Location: {i[7]}, Job Salary: {i[8]}")
+              print(f"-->Job ID: {i[0]} , Job Title: {i[4]}, Job Description: {i[5]}, Employer Name: {i[6]}, Job Location: {i[7]}, Job Salary: {i[8]}")
             remove = input("Do you wish to unmark a job as saved? (y/n): ")
             while remove not in ['y','n']:
               remove = input("Invalid input. Enter 'y' or 'n': ")

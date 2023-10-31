@@ -38,7 +38,13 @@ from main import (
   view_profile,
   search_for_job,
   all_user_job_list,
-  all_job_list
+  all_job_list,
+  delete_job,
+  get_saved_jobs,
+  apply_job,
+  all_apps,
+  get_unapplied_jobs,
+  save_job
 )
 
 
@@ -799,6 +805,7 @@ def test_update_work_experience(monkeypatch):
 # ==========Epic 6 test cases as of 10/30/2023============#
 # ========================================================#
 
+
 @pytest.fixture
 def temp_db():
     conn = sqlite3.connect("accounts.db")
@@ -821,6 +828,7 @@ def temp_db():
     cursor.execute('INSERT INTO jobs (user_num, title, description) VALUES (?, ?, ?)', (2, 'Job 2', 'Description 2'))
     cursor.execute('INSERT INTO jobs (user_num, title, description) VALUES (?, ?, ?)', (1, 'Job 3', 'Description 3'))
 
+    #conn.commit()
     yield conn
     conn.close()
 
@@ -852,4 +860,177 @@ def test_all_job_list(temp_db):
     for i, job in enumerate(jobs):
       assert job[2] == expected_titles[i]
       assert job[3] == expected_descriptions[i]
+
+# Write the test case for apply_job
+def test_apply_job(monkeypatch):
+  def test_apply_job(capsys):
+      # Test case input
+      job_num = 123
+      user_num = 456
   
+      # Call the function to be tested
+      apply_job(None, job_num, user_num)
+  
+      # Capture the printed output
+      captured = capsys.readouterr()
+      printed_output = captured.out.strip()
+  
+      # Verify the printed output
+      expected_output = f"{user_num} is applying to {job_num}"
+      assert printed_output == expected_output
+
+def test_all_jobs():
+  conn = sqlite3.connect(':memory:')
+  cursor = conn.cursor()
+
+  # Create the necessary table if it doesn't exist
+  cursor.execute('''
+      CREATE TABLE IF NOT EXISTS jobs (
+          job_num INTEGER PRIMARY KEY,
+          user_num INTEGER,
+          first_name TEXT,
+          last_name TEXT,
+          title TEXT,
+          description TEXT,
+          employer TEXT,
+          location TEXT,
+          salary TEXT,
+          applied BOOLEAN DEFAULT FALSE
+      )
+  ''')
+
+  # Insert test data for jobs
+  test_data = [
+      (1, 1, 'John', 'Doe', 'Software Engineer', 'Job description 1', 'Company A', 'Location A', 'Salary A', 0),
+      (2, 2, 'Jane', 'Smith', 'Data Analyst', 'Job description 2', 'Company B', 'Location B', 'Salary B', 1),
+      (3, 3, 'Bob', 'Johnson', 'Product Manager', 'Job description 3', 'Company C', 'Location C', 'Salary C', 0),
+  ]
+  cursor.executemany('''
+      INSERT INTO jobs (job_num, user_num, first_name, last_name, title, description, employer, location, salary, applied)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ''', test_data)
+  
+  # Call the function to be tested
+  result = all_jobs(conn)
+
+  # Verify the result
+  expected_result = [
+      (1, 1, 'John', 'Doe', 'Software Engineer', 'Job description 1', 'Company A', 'Location A', 'Salary A', 0),
+      (2, 2, 'Jane', 'Smith', 'Data Analyst', 'Job description 2', 'Company B', 'Location B', 'Salary B', 1),
+      (3, 3, 'Bob', 'Johnson', 'Product Manager', 'Job description 3', 'Company C', 'Location C', 'Salary C', 0),
+  ]
+  assert result == expected_result
+
+
+def test_all_apps():
+  conn = sqlite3.connect(':memory:')
+  cursor = conn.cursor()
+
+  # Create the necessary table if it doesn't exist
+  cursor.execute('''
+      CREATE TABLE IF NOT EXISTS applications (
+          application_id INTEGER PRIMARY KEY,
+          user_num INTEGER,
+          job_num INTEGER,
+          job_title TEXT,
+          company_name TEXT,
+          graduation_date TEXT,
+          when_to_start TEXT,
+          why_good_fit TEXT
+      )
+  ''')
+
+  # Insert test data for applications
+  test_data = [
+      (1, 1, 1, 'Software Engineer', 'Company A', '2023-05-15', 'ASAP', 'Experience and skills match'),
+      (2, 2, 2, 'Data Analyst', 'Company B', '2023-06-30', '2 weeks notice', 'Strong analytical skills'),
+      (3, 3, 3, 'Product Manager', 'Company C', '2023-07-15', 'Flexible', 'Leadership experience'),
+  ]
+  cursor.executemany('''
+      INSERT INTO applications (application_id, user_num, job_num, job_title, company_name, graduation_date, when_to_start, why_good_fit)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  ''', test_data)
+
+  # Call the function to be tested
+  result = all_apps(conn)
+
+  # Verify the result
+  expected_result = [
+      (1, 1, 1, 'Software Engineer', 'Company A', '2023-05-15', 'ASAP', 'Experience and skills match'),
+      (2, 2, 2, 'Data Analyst', 'Company B', '2023-06-30', '2 weeks notice', 'Strong analytical skills'),
+      (3, 3, 3, 'Product Manager', 'Company C', '2023-07-15', 'Flexible', 'Leadership experience'),
+  ]
+  assert result == expected_result
+
+
+
+
+# Write the test case for save_job
+def test_save_job(capsys):
+  conn = sqlite3.connect(':memory:')
+  cursor = conn.cursor()
+
+  # Create the necessary tables if they don't exist
+  cursor.execute('''
+      CREATE TABLE IF NOT EXISTS jobs (
+          job_num INTEGER PRIMARY KEY,
+          user_num INTEGER,
+          first_name TEXT,
+          last_name TEXT,
+          title TEXT,
+          description TEXT,
+          employer TEXT,
+          location TEXT,
+          salary TEXT,
+          applied BOOLEAN DEFAULT FALSE
+      )
+  ''')
+
+  cursor.execute('''
+      CREATE TABLE IF NOT EXISTS saved_jobs (
+          saved_job_id INTEGER PRIMARY KEY,
+          user_num INTEGER,
+          job_num INTEGER,
+          job_title TEXT,
+          company_name TEXT
+      )
+  ''')
+
+  # Insert test data for jobs
+  test_jobs_data = [
+      (1, 1, 'John', 'Doe', 'Software Engineer', 'Job description 1', 'Company A', 'Location A', 'Salary A', 0),
+      (2, 2, 'Jane', 'Smith', 'Data Analyst', 'Job description 2', 'Company B', 'Location B', 'Salary B', 0),
+      (3, 3, 'Bob', 'Johnson', 'Product Manager', 'Job description 3', 'Company C', 'Location C', 'Salary C', 0),
+  ]
+  cursor.executemany('''
+      INSERT INTO jobs (job_num, user_num, first_name, last_name, title, description, employer, location, salary, applied)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ''', test_jobs_data)
+
+  # Test case input
+  user_num = 1
+  job_num = 1
+
+  # Call the function to be tested
+  result = save_job(user_num, job_num, conn)
+
+  # Capture the printed output
+  captured = capsys.readouterr()
+  printed_output = captured.out.strip()
+
+  # Verify the result
+  expected_output = "The job has been saved."
+  assert result is True
+  assert printed_output == expected_output
+
+  # Attempt to save the same job again
+  result = save_job(user_num, job_num, conn)
+
+  # Capture the printed output
+  captured = capsys.readouterr()
+  printed_output = captured.out.strip()
+
+  # Verify that the job was not saved again
+  expected_output = "You have already saved this job!"
+  assert result is False
+  assert printed_output == expected_output
